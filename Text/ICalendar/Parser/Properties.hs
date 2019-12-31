@@ -1,32 +1,32 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE FlexibleContexts  #-}
 module Text.ICalendar.Parser.Properties where
 
 import           Control.Applicative
-import           Control.Monad.Error          hiding (mapM)
-import           Control.Monad.RWS            (asks)
-import qualified Data.ByteString.Base64.Lazy  as B64
-import qualified Data.ByteString.Lazy.Char8   as B
-import           Data.CaseInsensitive         (CI)
-import qualified Data.CaseInsensitive         as CI
+import           Control.Monad.Except             hiding (mapM)
+import           Control.Monad.RWS                (asks)
+import qualified Data.ByteString.Base64.Lazy      as B64
+import qualified Data.ByteString.Lazy.Char8       as B
+import           Data.CaseInsensitive             (CI)
+import qualified Data.CaseInsensitive             as CI
 import           Data.Char
 import           Data.Default
 import           Data.Maybe
-import qualified Data.Set                     as S
-import           Data.Text.Lazy               (Text)
-import qualified Data.Text.Lazy               as T
-import           Data.Traversable             (mapM)
-import qualified Data.Version                 as Ver
-import           Prelude                      hiding (mapM)
-import           Text.ParserCombinators.ReadP (readP_to_S)
+import qualified Data.Set                         as S
+import           Data.Text.Lazy                   (Text)
+import qualified Data.Text.Lazy                   as T
+import           Data.Traversable                 (mapM)
+import qualified Data.Version                     as Ver
+import           Prelude                          hiding (mapM)
+import           Text.ParserCombinators.ReadP     (readP_to_S)
 
-import Text.Parsec.Prim hiding ((<|>))
+import           Text.Parsec.Prim                 hiding ((<|>))
 
-import Text.ICalendar.Parser.Common
-import Text.ICalendar.Parser.Parameters
-import Text.ICalendar.Types
+import           Text.ICalendar.Parser.Common
+import           Text.ICalendar.Parser.Parameters
+import           Text.ICalendar.Types
 
 parseFreeBusy :: Content -> ContentParser FreeBusy
 parseFreeBusy (ContentLine _ "FREEBUSY" o bs) = do
@@ -215,7 +215,7 @@ parseRecurId dts (ContentLine p "RECURRENCE-ID" o bs) = do
                     (UTCDateTime {}, ZonedDateTime {})    -> err dts recurid
                     (FloatingDateTime {}, UTCDateTime {}) -> err dts recurid
                     (ZonedDateTime {}, UTCDateTime {})    -> err dts recurid
-                    _ -> return recurid
+                    _                                     -> return recurid
          _ -> err dts recurid
   where err d r = throwError $ "parseRecurId: DTSTART local time mismatch: " ++
                                 show (d, r)
@@ -278,7 +278,7 @@ parseGeo (ContentLine _ "GEO" o bs) = do
         throwError $ "Invalid latitude/longitude: " ++ show bs
     return $ Geo (fromJust lat) (fromJust long) (toO o)
   where stripPlus ('+':xs) = xs
-        stripPlus xs = xs
+        stripPlus xs       = xs
 parseGeo x = throwError $ "parseGeo: " ++ show x
 
 -- | Parse classification. 3.8.1.3
@@ -287,10 +287,10 @@ parseClass (ContentLine _ "CLASS" o bs) = do
     iconv <- asks dfBS2IText
     return . flip Class (toO o) $
         case iconv bs of
-             "PUBLIC" -> Public
-             "PRIVATE" -> Private
+             "PUBLIC"       -> Public
+             "PRIVATE"      -> Private
              "CONFIDENTIAL" -> Confidential
-             x -> ClassValueX x
+             x              -> ClassValueX x
 parseClass x = throwError $ "parseClass: " ++ show x
 
 -- | Parse TZName. 3.8.3.1

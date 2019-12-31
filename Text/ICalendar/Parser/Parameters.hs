@@ -2,26 +2,26 @@
 module Text.ICalendar.Parser.Parameters where
 
 import           Control.Applicative
-import           Control.Monad.Error
-import           Control.Monad.RWS          (MonadWriter (tell))
-import           Data.ByteString.Lazy.Char8 (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as B
-import           Data.CaseInsensitive       (CI)
+import           Control.Monad.Except
+import           Control.Monad.RWS            (MonadWriter (tell))
+import           Data.ByteString.Lazy.Char8   (ByteString)
+import qualified Data.ByteString.Lazy.Char8   as B
+import           Data.CaseInsensitive         (CI)
 import           Data.Char
 import           Data.Default
 import           Data.Maybe
-import           Data.Text.Lazy             (Text)
-import qualified Data.Text.Lazy             as T
+import           Data.Text.Lazy               (Text)
+import qualified Data.Text.Lazy               as T
 
-import           Codec.MIME.Parse       (parseMIMEType)
-import           Codec.MIME.Type        (MIMEType, mimeType)
-import qualified Text.Parsec            as P
-import           Text.Parsec.Combinator hiding (optional)
+import           Codec.MIME.Parse             (parseMIMEType)
+import           Codec.MIME.Type              (MIMEType, mimeType)
+import qualified Text.Parsec                  as P
+import           Text.Parsec.Combinator       hiding (optional)
 import           Text.Parsec.Perm
-import           Text.Parsec.Prim       hiding ((<|>))
+import           Text.Parsec.Prim             hiding ((<|>))
 
-import Text.ICalendar.Parser.Common
-import Text.ICalendar.Types
+import           Text.ICalendar.Parser.Common
+import           Text.ICalendar.Types
 
 parseAlarmTriggerRelationship :: CI Text
                               -> ContentParser AlarmTriggerRelationship
@@ -35,13 +35,13 @@ parseRelationshipType :: CI Text -> RelationshipType
 parseRelationshipType "PARENT"  = Parent
 parseRelationshipType "CHILD"   = Child
 parseRelationshipType "SIBLING" = Sibling
-parseRelationshipType x = RelationshipTypeX x
+parseRelationshipType x         = RelationshipTypeX x
 
 -- | Parse bool. 3.3.2
 parseBool :: CI Text -> ContentParser Bool
-parseBool "TRUE" = return True
+parseBool "TRUE"  = return True
 parseBool "FALSE" = return False
-parseBool x = throwError $ "parseBool: " ++ show x
+parseBool x       = throwError $ "parseBool: " ++ show x
 
 -- | Parse recurrence identifier range. 3.2.13
 parseRange :: CI Text -> ContentParser Range
@@ -61,30 +61,30 @@ parseFBType x                  = FBTypeX x
 -- | Parse participation status. 3.2.12
 parsePartStat :: CI Text -> PartStat
 parsePartStat "NEEDS-ACTION" = PartStatNeedsAction
-parsePartStat "ACCEPTED" = Accepted
-parsePartStat "DECLINED" = Declined
-parsePartStat "TENTATIVE" = Tentative
-parsePartStat "DELEGATED" = Delegated
-parsePartStat "COMPLETED" = PartStatCompleted
-parsePartStat "IN-PROCESS" = InProcess
-parsePartStat x = PartStatX x
+parsePartStat "ACCEPTED"     = Accepted
+parsePartStat "DECLINED"     = Declined
+parsePartStat "TENTATIVE"    = Tentative
+parsePartStat "DELEGATED"    = Delegated
+parsePartStat "COMPLETED"    = PartStatCompleted
+parsePartStat "IN-PROCESS"   = InProcess
+parsePartStat x              = PartStatX x
 
 -- | Parse role.
 parseRole :: CI Text -> Role
-parseRole "CHAIR" = Chair
+parseRole "CHAIR"           = Chair
 parseRole "REQ-PARTICIPANT" = ReqParticipant
 parseRole "OPT-PARTICIPANT" = OptParticipant
 parseRole "NON-PARTICIPANT" = NonParticipant
-parseRole x = RoleX x
+parseRole x                 = RoleX x
 
 
 parseCUType :: CI Text -> CUType
 parseCUType "INDIVIDUAL" = Individual
-parseCUType "GROUP" = Group
-parseCUType "RESOURCE" = Resource
-parseCUType "ROOM" = Room
-parseCUType "UNKNOWN" = Unknown
-parseCUType x = CUTypeX x
+parseCUType "GROUP"      = Group
+parseCUType "RESOURCE"   = Resource
+parseCUType "ROOM"       = Room
+parseCUType "UNKNOWN"    = Unknown
+parseCUType x            = CUTypeX x
 
 parseMime :: Text -> ContentParser MIMEType
 parseMime t = let m = mimeType .: parseMIMEType $ T.toStrict t
@@ -180,9 +180,9 @@ parseRecur dts =
 
         mkRecur f uc i s m h d md yd wn mo sp wkst = do
             uc' <- case uc of
-                        Just (Left x) -> Just . Left <$> x
+                        Just (Left x)  -> Just . Left <$> x
                         Just (Right y) -> return . Just $ Right y
-                        Nothing -> return Nothing
+                        Nothing        -> return Nothing
             return $ Recur f uc' i s m h d md yd wn mo sp wkst
 
 

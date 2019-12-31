@@ -2,21 +2,20 @@
 {-# LANGUAGE RecordWildCards   #-}
 module Text.ICalendar.Parser.Components where
 
-import           Control.Applicative
-import           Control.Arrow        ((&&&))
-import           Control.Monad.Error  hiding (mapM)
-import           Control.Monad.RWS    (MonadState (get), tell)
-import qualified Data.CaseInsensitive as CI
-import qualified Data.Foldable        as F
-import           Data.List            (partition)
-import qualified Data.Map             as M
+import           Control.Arrow                    ((&&&))
+import           Control.Monad.Except             hiding (mapM)
+import           Control.Monad.RWS                (MonadState (get), tell)
+import qualified Data.CaseInsensitive             as CI
+import qualified Data.Foldable                    as F
+import           Data.List                        (partition)
+import qualified Data.Map                         as M
 import           Data.Maybe
-import           Data.Set             (Set)
-import qualified Data.Set             as S
+import           Data.Set                         (Set)
+import qualified Data.Set                         as S
 
-import Text.ICalendar.Parser.Common
-import Text.ICalendar.Parser.Properties
-import Text.ICalendar.Types
+import           Text.ICalendar.Parser.Common
+import           Text.ICalendar.Parser.Properties
+import           Text.ICalendar.Types
 
 -- | Parse a VCALENDAR component. 3.4
 parseVCalendar :: Content -> ContentParser VCalendar
@@ -37,8 +36,8 @@ parseVCalendar c@(Component _ "VCALENDAR" _) = down c $ do
     vcOther <- otherProperties
     return VCalendar {..}
   where recur :: Maybe RecurrenceId -> Maybe (Either Date DateTime)
-        recur Nothing = Nothing
-        recur (Just (RecurrenceIdDate x _ _)) = Just (Left x)
+        recur Nothing                             = Nothing
+        recur (Just (RecurrenceIdDate x _ _))     = Just (Left x)
         recur (Just (RecurrenceIdDateTime x _ _)) = Just (Right x)
         f :: Ord b => (a -> b) -> Set a -> ContentParser (M.Map b a)
         f g = F.foldlM h M.empty

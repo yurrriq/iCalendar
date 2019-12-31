@@ -1,11 +1,10 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE CPP #-}
 module Text.ICalendar.Parser.Common where
 
 import           Control.Applicative
 import           Control.Arrow                (second)
-import           Control.Monad.Error          hiding (mapM)
+import           Control.Monad.Except         hiding (mapM)
 import           Control.Monad.RWS            (MonadState (get, put),
                                                MonadWriter (tell), RWS, asks,
                                                modify)
@@ -25,23 +24,18 @@ import           Data.Text.Lazy               (Text)
 import qualified Data.Text.Lazy               as T
 import qualified Data.Text.Lazy.Encoding      as TE
 import           Data.Time                    (Day, LocalTime (LocalTime),
-                                               TimeOfDay (), UTCTime (UTCTime))
+                                               TimeOfDay, UTCTime (UTCTime),
+                                               defaultTimeLocale)
 import qualified Data.Time                    as Time
 import           Data.Traversable             (mapM)
 import qualified Network.URI                  as URI
 import           Prelude                      hiding (mapM)
 
-#if MIN_VERSION_time(1,5,0)
-import Data.Time (defaultTimeLocale)
-#else
-import System.Locale (defaultTimeLocale)
-#endif
+import qualified Text.Parsec                  as P
+import           Text.Parsec.Combinator       hiding (optional)
+import           Text.Parsec.Prim             hiding ((<|>))
 
-import qualified Text.Parsec            as P
-import           Text.Parsec.Combinator hiding (optional)
-import           Text.Parsec.Prim       hiding ((<|>))
-
-import Text.ICalendar.Types
+import           Text.ICalendar.Types
 
 -- | Content lines, separated into components. 3.1.
 data Content = ContentLine P.SourcePos (CI Text) [(CI Text, [Text])] ByteString
@@ -50,7 +44,7 @@ data Content = ContentLine P.SourcePos (CI Text) [(CI Text, [Text])] ByteString
 
 type TextParser = P.Parsec ByteString DecodingFunctions
 
-type ContentParser = ErrorT String -- Fatal errors.
+type ContentParser = ExceptT String -- Fatal errors.
                             (RWS DecodingFunctions
                                  [String] -- Warnings.
                                  (P.SourcePos, [Content]))
@@ -78,10 +72,10 @@ parseText' bs = do c <- asks dfBS2Text
                        '\\' -> do y <- P.anyChar
                                   case y of
                                        '\\' -> nxt '\\'
-                                       ';' -> nxt ';'
-                                       ',' -> nxt ','
-                                       z | z `elem` ['n','N'] -> nxt '\n'
-                                       _ -> fail $ "unexpected " ++ show x
+                                       ';'  -> nxt ';'
+                                       ','  -> nxt ','
+                                       z    | z `elem` ['n','N'] -> nxt '\n'
+                                       _    -> fail $ "unexpected " ++ show x
                        y -> nxt y
         -- isTSafe + 0x22, 0x3A, and 0x5C is pattern matched against.
         isTSafe' c = let n = ord c
@@ -93,7 +87,7 @@ parseText' bs = do c <- asks dfBS2Text
 -- | Chech that there's no remainding text after the parser is done.
 noRestText :: ([Text], ByteString) -> ContentParser [Text]
 noRestText (x, "") = return x
-noRestText (_, x) = throwError $ "noRestText: remainding text: " ++ show x
+noRestText (_, x)  = throwError $ "noRestText: remainding text: " ++ show x
 
 -- | Parse text, not allowing any remainding text.
 parseText :: ByteString -> ContentParser [Text]
@@ -129,8 +123,8 @@ parseTimeStr s = do
     (t, r) <- lastToMaybe (Time.readSTime True defaultTimeLocale "%H%M%S" s)
     case r of
          "Z" -> return (t, True)
-         "" -> return (t, False)
-         _ -> fail ""
+         ""  -> return (t, False)
+         _   -> fail ""
 
 -- | Parse a Date value. 3.3.4
 parseDate :: ByteString -> ContentParser Date
@@ -148,13 +142,13 @@ parseDate bs = do
 
 parseURI :: String -> ContentParser URI.URI
 parseURI s = case URI.parseURI s of
-                  Just x -> return x
+                  Just x  -> return x
                   Nothing -> throwError $  "Invalid URI: " ++ show s
 
 -- | Convert a 'DateTime' to 'UTCTime', giving an appropriate error.
 mustBeUTC :: DateTime -> ContentParser UTCTime
 mustBeUTC (UTCDateTime x) = return x
-mustBeUTC _ = throwError "DateTime-value must be UTC"
+mustBeUTC _               = throwError "DateTime-value must be UTC"
 
 -- | Parse something simple with only a Text-field for the content, and
 -- 'OtherParams'.
@@ -311,7 +305,7 @@ digitsN = sepBy1 digits (P.char ',')
 
 -- | Set the parser context.
 down :: Content -> ContentParser a -> ContentParser a
-down (Component p _ x) = down' (p, x)
+down (Component p _ x)       = down' (p, x)
 down x@(ContentLine p _ _ _) = down' (p, [x])
 
 -- | Set the parser context.
@@ -382,26 +376,26 @@ reqN w f (xs, xs') = do modify (second $ const xs')
 -- | Only allow one parameter value.
 paramOnlyOne :: [a] -> ContentParser a
 paramOnlyOne [x] = return x
-paramOnlyOne _ = throwError "Only one parameter value allowed."
+paramOnlyOne _   = throwError "Only one parameter value allowed."
 
 valueOnlyOne :: [a] -> ContentParser a
 valueOnlyOne [x] = return x
-valueOnlyOne [] = throwError "Must have one value, not zero."
-valueOnlyOne _ = throwError "Only one value allowed."
+valueOnlyOne []  = throwError "Must have one value, not zero."
+valueOnlyOne _   = throwError "Only one value allowed."
 
 -- | Line predicate.
 isLineNamed :: Content -> CI Text -> Bool
 isLineNamed (ContentLine _ n _ _) n' | n == n' = True
-isLineNamed _ _ = False
+isLineNamed _ _                      = False
 
 -- | Component name predicate.
 isComponentNamed :: Content -> CI Text -> Bool
 isComponentNamed (Component _ n _) n' | n == n' = True
-isComponentNamed _ _ = False
+isComponentNamed _ _                  = False
 
 isComponent :: Content -> Bool
 isComponent Component {} = True
-isComponent _ = False
+isComponent _            = False
 
 -- Util
 

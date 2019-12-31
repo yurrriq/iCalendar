@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings  #-}
 -- | ICalendar types, based on RFC5545.
@@ -12,15 +11,15 @@ import           Data.CaseInsensitive       (CI)
 import           Data.Default
 import           Data.Map                   (Map)
 import qualified Data.Map                   as M
-import           Data.Set                   (Set)
 import           Data.Semigroup             as Sem
+import           Data.Set                   (Set)
 import           Data.Text.Lazy             (Text, pack)
 import           Data.Time
 import           Data.Typeable              (Typeable)
 import           Data.Version               (Version (..), showVersion)
 import           Network.URI                (URI)
 
-import Paths_iCalendar (version)
+import           Paths_iCalendar            (version)
 
 -- | Language.
 newtype Language = Language (CI Text) -- TODO: RFC5646 types and parser.
@@ -103,9 +102,6 @@ instance Sem.Semigroup VCalendar where
 
 instance Monoid VCalendar where
     mempty = def
-#if !(MIN_VERSION_base(4,11,0))
-    mappend = (<>)
-#endif
 
 -- | Product Identifier. 3.7.3.
 data ProdId = ProdId

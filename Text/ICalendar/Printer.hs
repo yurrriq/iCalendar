@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE CPP #-}
 module Text.ICalendar.Printer
     ( EncodingFunctions(..)
     , printICalendar
@@ -28,24 +27,18 @@ import           Data.Set                     (Set)
 import qualified Data.Set                     as S
 import           Data.Text.Lazy               (Text)
 import qualified Data.Text.Lazy               as T
-import           Data.Time                    (FormatTime ())
+import           Data.Time                    (FormatTime, defaultTimeLocale)
 import qualified Data.Time                    as Time
 import qualified Data.Version                 as Ver
 import qualified Network.URI                  as URI
 import           Prelude                      hiding (mapM_)
 
-#if MIN_VERSION_time(1,5,0)
-import Data.Time (defaultTimeLocale)
-#else
-import System.Locale (defaultTimeLocale)
-#endif
-
 import           Text.Printf                  (printf)
 
-import           Codec.MIME.Type             (MIMEType, showMIMEType)
-import qualified Data.ByteString.Base64.Lazy as B64
+import           Codec.MIME.Type              (MIMEType, showMIMEType)
+import qualified Data.ByteString.Base64.Lazy  as B64
 
-import Text.ICalendar.Types
+import           Text.ICalendar.Types
 
 
 -- | Functions for encoding into bytestring builders.
@@ -318,10 +311,10 @@ instance IsProperty a => IsProperty (Set a) where
 
 instance IsProperty a => IsProperty (Maybe a) where
     printProperty (Just x) = printProperty x
-    printProperty _ = return ()
+    printProperty _        = return ()
 
 instance (IsProperty a, IsProperty b) => IsProperty (Either a b) where
-    printProperty (Left x) = printProperty x
+    printProperty (Left x)  = printProperty x
     printProperty (Right x) = printProperty x
 
 instance IsProperty FreeBusy where
@@ -477,7 +470,7 @@ instance IsProperty ExDate where
     printProperty exd = ln $ do
         prop "EXDATE" exd
         case exd of
-             ExDates {..} -> printN printValue $ S.toList exDates
+             ExDates {..}     -> printN printValue $ S.toList exDates
              ExDateTimes {..} -> printN printValue $ S.toList exDateTimes
 
 instance IsProperty RequestStatus where
@@ -540,12 +533,12 @@ class ToParam a where
     toParam :: a -> [(Text, [(Quoting, Text)])]
 
 instance ToParam a => ToParam (Maybe a) where
-    toParam Nothing = []
+    toParam Nothing  = []
     toParam (Just x) = toParam x
 
 instance ToParam a => ToParam (Set a) where
     toParam s = case S.maxView s of
-                     Nothing -> []
+                     Nothing     -> []
                      Just (x, _) -> toParam x
 
 instance ToParam ExDate where
@@ -565,7 +558,7 @@ instance ToParam Dir where
 
 instance ToParam DateTime where
     toParam ZonedDateTime {..} = [("TZID", [(NoQuotes, dateTimeZone)])]
-    toParam _ = []
+    toParam _                  = []
 
 instance ToParam DTEnd where
     toParam DTEndDateTime {..} = toParam dtEndOther <>
@@ -596,7 +589,7 @@ instance ToParam RDate where
     toParam RDateDateTimes {..} = toParam rDateDateTimes <> toParam rDateOther
 
 instance ToParam Period where
-    toParam (PeriodDates x _) = toParam x
+    toParam (PeriodDates x _)    = toParam x
     toParam (PeriodDuration x _) = toParam x
 
 instance ToParam DTStamp where
@@ -628,10 +621,10 @@ instance ToParam RecurrenceId where
 
 instance ToParam Range where
     toParam ThisAndFuture = [("RANGE", [(NoQuotes, "THISANDFUTURE")])]
-    toParam _ = [] -- ThisAndPrior MUST NOT be generated.
+    toParam _             = [] -- ThisAndPrior MUST NOT be generated.
 
 instance ToParam FBType where
-    toParam x | x == def    = []
+    toParam x               | x == def    = []
     toParam Free            = [("FBTYPE", [(NoQuotes, "FREE")])]
     toParam Busy            = [("FBTYPE", [(NoQuotes, "BUSY")])]
     toParam BusyUnavailable = [("FBTYPE", [(NoQuotes, "BUSY-UNAVAILABLE")])]
@@ -650,13 +643,13 @@ instance ToParam Attachment where
                                     , ("ENCODING", [(NoQuotes, "BASE64")])]
 
 instance ToParam CUType where
-    toParam x | x == def = []
-    toParam Individual   = [("CUTYPE", [(NoQuotes, "INDIVIDUAL")])]
-    toParam Group        = [("CUTYPE", [(NoQuotes, "GROUP")])]
-    toParam Resource     = [("CUTYPE", [(NoQuotes, "RESOURCE")])]
-    toParam Room         = [("CUTYPE", [(NoQuotes, "ROOM")])]
-    toParam Unknown      = [("CUTYPE", [(NoQuotes, "UNKNOWN")])]
-    toParam (CUTypeX x)  = [("CUTYPE", [(Optional, CI.original x)])]
+    toParam x           | x == def = []
+    toParam Individual  = [("CUTYPE", [(NoQuotes, "INDIVIDUAL")])]
+    toParam Group       = [("CUTYPE", [(NoQuotes, "GROUP")])]
+    toParam Resource    = [("CUTYPE", [(NoQuotes, "RESOURCE")])]
+    toParam Room        = [("CUTYPE", [(NoQuotes, "ROOM")])]
+    toParam Unknown     = [("CUTYPE", [(NoQuotes, "UNKNOWN")])]
+    toParam (CUTypeX x) = [("CUTYPE", [(Optional, CI.original x)])]
 
 instance ToParam Member where
     toParam (Member x) | S.null x = []
@@ -664,7 +657,7 @@ instance ToParam Member where
                           , (NeedQuotes,) . T.pack . show <$> S.toList x)]
 
 instance ToParam Role where
-    toParam x | x == def   = []
+    toParam x              | x == def   = []
     toParam Chair          = [("ROLE", [(NoQuotes, "CHAIR")])]
     toParam ReqParticipant = [("ROLE", [(NoQuotes, "REQ-PARTICIPANT")])]
     toParam OptParticipant = [("ROLE", [(NoQuotes, "OPT-PARTICIPANT")])]
@@ -672,7 +665,7 @@ instance ToParam Role where
     toParam (RoleX x)      = [("ROLE", [(Optional, CI.original x)])]
 
 instance ToParam PartStat where
-    toParam x | x == def        = []
+    toParam x                   | x == def        = []
     toParam PartStatNeedsAction = [("PARTSTAT", [(NoQuotes, "NEEDS-ACTION")])]
     toParam Accepted            = [("PARTSTAT", [(NoQuotes, "ACCEPTED")])]
     toParam Declined            = [("PARTSTAT", [(NoQuotes, "DECLINED")])]
@@ -683,7 +676,7 @@ instance ToParam PartStat where
     toParam (PartStatX x)       = [("PARTSTAT", [(Optional, CI.original x)])]
 
 instance ToParam RelationshipType where
-    toParam x | x == def          = []
+    toParam x                     | x == def          = []
     toParam Parent                = [("RELTYPE", [(NoQuotes, "PARENT")])]
     toParam Child                 = [("RELTYPE", [(NoQuotes, "CHILD")])]
     toParam Sibling               = [("RELTYPE", [(NoQuotes, "SIBLING")])]
@@ -720,9 +713,9 @@ instance ToParam Attendee where
                             toParam attendeeOther
 
 instance ToParam AlarmTriggerRelationship where
-    toParam x | x == def = []
-    toParam Start        = [("RELATED", [(NoQuotes, "START")])]
-    toParam End          = [("RELATED", [(NoQuotes, "END")])]
+    toParam x     | x == def = []
+    toParam Start = [("RELATED", [(NoQuotes, "START")])]
+    toParam End   = [("RELATED", [(NoQuotes, "END")])]
 
 instance ToParam Trigger where
     toParam TriggerDuration {..} = toParam triggerOther <>
@@ -745,7 +738,7 @@ printUTCOffset n = do case signum n of
 
 printNWeekday :: Either (Int, Weekday) Weekday -> ContentPrinter ()
 printNWeekday (Left (n, w)) = printShow n >> printValue w
-printNWeekday (Right x) = printValue x
+printNWeekday (Right x)     = printValue x
 
 printShow :: Show a => a -> ContentPrinter ()
 printShow = out . T.pack . show
@@ -755,7 +748,7 @@ printShowN = printN printShow
 
 printN :: (a -> ContentPrinter ()) -> [a] -> ContentPrinter ()
 printN m (x:xs) = m x >> sequence_ [putc ',' >> m x' | x' <- xs]
-printN _ _ = return ()
+printN _ _      = return ()
 
 printShowUpper :: Show a => a -> ContentPrinter ()
 printShowUpper = out . T.pack . map toUpper . show
@@ -779,7 +772,7 @@ instance IsValue Recur where
         printShowUpper recurFreq
         forM_ recurUntilCount $ \x ->
             case x of
-                 Left y -> out ";UNTIL=" >> printValue y
+                 Left y  -> out ";UNTIL=" >> printValue y
                  Right y -> out ";COUNT=" >> printShow y
         when (recurInterval /= 1) $
             out ";INTERVAL=" >> printShow recurInterval
@@ -834,7 +827,7 @@ instance IsValue JournalStatus where
 
 instance IsValue ClassValue where
     printValue (ClassValueX x) = out $ CI.original x
-    printValue x = printShowUpper x
+    printValue x               = printShowUpper x
 
 instance IsValue Weekday where
     printValue Sunday    = out "SU"
@@ -856,7 +849,7 @@ instance IsValue DateTime where
         out . T.pack $ formatTime "%C%y%m%dT%H%M%S" dateTimeFloating
 
 instance IsValue (Either Date DateTime) where
-    printValue (Left x) = printValue x
+    printValue (Left x)  = printValue x
     printValue (Right x) = printValue x
 
 instance IsValue DTStamp where
@@ -864,7 +857,7 @@ instance IsValue DTStamp where
 
 instance IsValue DTStart where
     printValue DTStartDateTime {..} = printValue dtStartDateTimeValue
-    printValue DTStartDate {..} = printValue dtStartDateValue
+    printValue DTStartDate {..}     = printValue dtStartDateValue
 
 instance IsValue URI.URI where
     printValue = printShow
@@ -894,7 +887,7 @@ instance IsValue RecurrenceId where
     printValue RecurrenceIdDateTime {..} = printValue recurrenceIdDateTime
 
 instance IsValue Period where
-    printValue (PeriodDates f t) = printValue f >> putc '/' >> printValue t
+    printValue (PeriodDates f t)    = printValue f >> putc '/' >> printValue t
     printValue (PeriodDuration f d) = printValue f >> putc '/' >> printValue d
 
 instance IsValue UTCPeriod where
@@ -907,7 +900,7 @@ instance IsValue RDate where
     printValue RDatePeriods {..}   = printN printValue $ S.toList rDatePeriods
 
 instance IsValue Attachment where
-    printValue UriAttachment {..} = printShow attachUri
+    printValue UriAttachment {..}    = printShow attachUri
     printValue BinaryAttachment {..} = bytestring $ B64.encode attachContent
 
 -- }}}
@@ -925,12 +918,12 @@ paramVals _ = return ()
 
 paramVal :: (Quoting, Text) -> ContentPrinter ()
 paramVal (NeedQuotes, t) = putc '"' >> out t >> putc '"'
-paramVal (NoQuotes, t) = out t
-paramVal (_, t) = paramVal (NeedQuotes, t)
+paramVal (NoQuotes, t)   = out t
+paramVal (_, t)          = paramVal (NeedQuotes, t)
 
 texts :: [Text] -> ContentPrinter ()
 texts (x:xs) = text x >> sequence_ [putc ',' >> text x' | x' <- xs]
-texts _ = return ()
+texts _      = return ()
 
 text :: Text -> ContentPrinter ()
 text t = case T.uncons t of
@@ -947,7 +940,7 @@ bytestring = BS.foldl' (\m c -> m >> putc8 c) (return ())
 out :: Text -> ContentPrinter ()
 out t = case T.uncons t of
              Just (c, r) -> putc c >> out r
-             Nothing -> return ()
+             Nothing     -> return ()
 
 putc :: Char -> ContentPrinter ()
 putc c = do x <- get

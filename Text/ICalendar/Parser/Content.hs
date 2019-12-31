@@ -1,22 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Text.ICalendar.Parser.Content where
 
-import           Control.Applicative
+import           Control.Applicative          (many, optional, (<|>))
 import           Control.Monad
 import           Data.ByteString.Lazy         (ByteString)
 import qualified Data.ByteString.Lazy.Builder as Bu
 import           Data.CaseInsensitive         (CI)
 import           Data.Char
-import           Data.Monoid
 import           Data.Text.Lazy               (Text)
 
-import qualified Text.Parsec                 as P
-import           Text.Parsec.ByteString.Lazy ()
-import           Text.Parsec.Combinator      hiding (optional)
-import           Text.Parsec.Prim            hiding (many, (<|>))
-import           Text.Parsec.Text.Lazy       ()
+import qualified Text.Parsec                  as P
+import           Text.Parsec.ByteString.Lazy  ()
+import           Text.Parsec.Combinator       hiding (optional)
+import           Text.Parsec.Prim             hiding (many, (<|>))
+import           Text.Parsec.Text.Lazy        ()
 
-import Text.ICalendar.Parser.Common
+import           Text.ICalendar.Parser.Common
 
 parseToContent :: TextParser [Content]
 parseToContent = do content <- sepEndBy1 contentline newline
@@ -31,7 +30,7 @@ componentalize :: (ByteString -> CI Text) -> [Content] -> [Content]
 componentalize f (ContentLine p "BEGIN" [] n:xs) =
     let (com, rest) = break g xs
         g (ContentLine _ "END" [] en) | f en == n' = True
-        g _ = False
+        g _                           = False
         n' = f n
      in Component p n' (componentalize f com)
                 : componentalize f (drop 1 rest)
@@ -69,7 +68,7 @@ takeWhile1 p = scan False f <?> "takeWhile1 ..."
 
 char :: Char -> TextParser ByteString
 char c = scan True f <?> show c
-  where f True x = if Just c == x then Just (Just False) else Nothing
+  where f True x  = if Just c == x then Just (Just False) else Nothing
         f False _ = Just Nothing
 
 
